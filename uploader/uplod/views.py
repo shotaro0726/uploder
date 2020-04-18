@@ -1,5 +1,6 @@
-from rest_framework import viewsets,permissions
+from rest_framework import viewsets,permissions,generics
 from rest_framework.response import Response
+from .utils import get_composite
 from .models import Composite
 from .serializers import CompositeSerializer
 
@@ -17,3 +18,12 @@ class CompositeViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+class GetCompositeFromPath(generics.RetrieveAPIView):
+    queryset = Composite.objects.all()
+    serializer_class = CompositeSerializer
+
+    def get_object(self):
+        request_path = self.kwargs['request_path']
+        composite = get_composite(request_path)
+        return composite

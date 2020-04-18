@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets,permissions
 from rest_framework.response import Response
 from .models import Composite
 from .serializers import CompositeSerializer
@@ -6,6 +6,7 @@ from .serializers import CompositeSerializer
 class CompositeViewSet(viewsets.ModelViewSet):
     queryset = Composite.objects.all()
     serializer_class = CompositeSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def list(self, request, *args, **kwargs):
         queryset = Composite.objects.filter(parent__isnull=True)

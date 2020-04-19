@@ -7,6 +7,8 @@
             <p class="composite" @click="moveTop">home</p>
         </div>
 
+        <button type="button" @click="createFile">ファイル作成</button>
+        <button type="button" @click="createDir">ディレクトリ作成</button>
         <div v-if="current.pk" class="current composite-wrapper" :key="current.pk">
             <p class="composite">{{ current.name }}</p>
         </div>
@@ -16,19 +18,35 @@
 
         <div class="child composite-wrapper" v-for="composite of current.composite_set" :key="composite.pk">
             <p class="composite" @click="move(composite)">{{ composite.name }}</p>
+            <button type="button" @click="update(composite)">更新</button>
+            <button type="button" @click="remove(composite)">削除</button>
         </div>
+
+        <div id="form">
+            <composite-form :selected="selected" @done="reload" @close="close"
+                            :key="selected.type + '-' + selected.data.pk"></composite-form>
+        </div>
+
     </section>
 </template>
 
 <script>
+import CompositeForm from './CompositeForm'
     export default {
         name: 'composite-list',
+        components: {
+            CompositeForm
+        },
         props: {
             path:{type: String},
         },
         data() {
             return {
                 current: {},
+                selected: {
+                    type:null,
+                    data:{}
+                }
             }
         },
         created() {
@@ -106,6 +124,41 @@
                 this.$router.push(beforePath)
                 this.getCompositeListFromPk(this.current.parent.pk)
             },
+            update(composite) {
+                this.selected.data = composite
+                this.selected.type = 'update'
+            },
+            remove(composite) {
+                this.selected.data = composite
+                this.selected.type = 'delete'
+            },
+            createFile() {
+                this.selected.data = {
+                    is_dir: false,
+                    parent: this.current.pk ? this.current.pk: '',
+                }
+                this.selected.type = 'new'
+            },
+            createDir() {
+                this.selected.data = {
+                    is_dir: true,
+                    parent: this.current.pk ? this.current.pk : '',
+                }
+                this.selected.type = 'new'
+            },
+            reload() {
+                this.selected.type = null
+                this.selected.data = {}
+                if(this.current.pk) {
+                    this.getCompositeListFromPk(this.current.pk)
+                } else {
+                    this.getCompositeListTop()
+                }
+            },
+            close () {
+                this.selected.data = {}
+                this.selected.type = null
+            }
         },
     }
 </script>
@@ -126,8 +179,30 @@
       .current > composite {
           margin-left: 50px;
       }
-      .cjild {
+      .child {
           margin-left: 100px;
       }
   }
+  @media (min-width: 1366px){
+      #composites {
+          padding-top: 120px;
+          display: grid;
+          grid-template-columns: 700px 1fr;
+      }
+      #list {
+          grid-column: 1;
+      }
+      #form {
+          grid-column: 2;
+          justify-self: center;
+          margin-top: 100px;
+          position: static;
+          top: 0;
+          left: 0;
+          transform: none;
+          background-color: transparent;
+          padding:0;
+          box-shadow: none;
+      }
+  } 
 </style>

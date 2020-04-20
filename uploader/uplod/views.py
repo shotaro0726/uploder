@@ -1,8 +1,16 @@
+import mimetypes
+import os
+import zipfile
 from rest_framework import viewsets,permissions,generics
 from rest_framework.response import Response
 from .utils import get_composite
 from .models import Composite
 from .serializers import CompositeSerializer
+from django.shortcuts import get_object_or_404
+from django.http import FileResponse, HttpResponseNotModified, HttpResponseBadRequest, HttpResponse
+from django.utils.http import http_date
+from django.views.static import was_modified_since
+from .utils import get_composite, walk_and_write_zip
 
 class CompositeViewSet(viewsets.ModelViewSet):
     queryset = Composite.objects.all()
@@ -27,3 +35,28 @@ class GetCompositeFromPath(generics.RetrieveAPIView):
         request_path = self.kwargs['request_path']
         composite = get_composite(request_path)
         return composite
+
+def serve(request, request_path):
+    composite = get_composite(request_path)
+    statobj = os.stat(composite.src.path)
+    if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'),statobj.st_mtime, statobj.st_size):
+        return HttpResponseNotModified()
+    content_type, encoding = mimetypes.guess_type(composite.src.path)
+    content_type = content_type or 'application/octet-stream'
+    response = FileResponse(composite.src.file, content_type=content_type)
+    response["Last-Modified"] = http_date(statobj.st_mtime)
+    if encoding:
+        response["Content-Encoding"] = encoding
+        return response
+
+def download_zip(request, pk):
+    composite = get_object_or_404(Composite, pk=pk)
+    if not composite.is_dir:
+        return HttpResponseBadRequest('ディレクトリがありません')
+    if not composite.zip_depth:
+        return HttpResponseBadRequest('ZIPが許可されているディレクトリではありません')
+    response = HttpResponse(content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{composite.name}.zip"'
+    zip_file = zip_file.ZipFile(response, 'w')
+    walk_and_write_zip(composite, zip_file, composite.zip_depth)
+    return response
